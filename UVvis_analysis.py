@@ -35,39 +35,31 @@ def get_args():
 
 def read_data(data_path):
 
+    # Read list of all samples and label transmittance and reflectance measurements
+    with open(data_path,'r') as file:
+        reader = csv.reader(file, delimiter=',')
+        data = list(reader)
+
+    measurements = [m for m in data[0][::2] if m != ''] 
+    meas_type = [t[-1] for t in data[1][1::2] if t != '']
+
+    samples = [m for (m,t) in list(zip(measurements, meas_type)) if t == 'T' and 'Baseline' not in m]
+
+    for i, _ in enumerate(measurements):
+        if meas_type[i] == 'T':
+            measurements[i] = measurements[i] + '_T'
+        elif meas_type[i] == 'R':
+            measurements[i] = measurements[i] + '_R'
+
+    # Import data for each measurement
     d = defaultdict(list)
-
-    with open(data_path,'r') as file:
-
-        reader = csv.reader(file, delimiter=',')
-        measurements = (list(reader))[0][::2] 
-
-        baseline_indexes = [i for i, elem in enumerate(measurements) if 'Baseline' in elem]
-        diffs = [t - s for s, t in zip(baseline_indexes,baseline_indexes[1:])]
-        reflectance_start = [i+1 for i, elem in enumerate(diffs) if elem > 2]
-        if len(reflectance_start) > 1:
-            print('WARNING: Input data formatting error.')
-        reflectance_start_index = baseline_indexes[reflectance_start[0]]
-
-        samples = [s for s in measurements[:reflectance_start_index] if 'Baseline' not in s]
-        print('Analysing samples: ', ', '.join(samples)) 
-
-        for i, _ in enumerate(measurements):
-            if i < reflectance_start_index:
-                measurements[i] = measurements[i] + '_T'
-            elif i >= reflectance_start_index:
-                measurements[i] = measurements[i] + '_R'
-
-
-    with open(data_path,'r') as file:
-        reader = csv.reader(file, delimiter=',')
-        for row in reader:
-            for j, m in enumerate(measurements):
-                try:
-                    datapoint = (float(row[2*j]), float(row[2*j+1]))
-                    d[m].append(datapoint)
-                except:
-                    continue
+    for row in data:
+        for j, m in enumerate(measurements):
+            try:
+                datapoint = (float(row[2*j]), float(row[2*j+1]))
+                d[m].append(datapoint)
+            except:
+                continue
 
     return samples, d
 
@@ -79,6 +71,9 @@ def analyse_data(samples, d, thickness, save_path):
     alpha_dict = {}
     energy_dict = {}
     samples_cut = []
+    
+    if not os.path.isdir(os.path.join(save_path,f'T_R_indv_plots')):
+        os.mkdir(os.path.join(save_path,f'T_R_indv_plots'))
 
     for s in samples:
         # test that wavelength ranges measured are the same:
@@ -89,15 +84,21 @@ def analyse_data(samples, d, thickness, save_path):
             T = np.array([j for i, j in d[s+'_T']])/100
             R = np.array([j for i, j in d[s+'_R']])/100
 
+            # Plot individual transmittance/reflectance
             plt.plot(E, T, label = 'transmittance')
             plt.plot(E, R, label = 'reflectance')
+            plt.xlim(E[0], E[-1])
+            plt.ylim(0, 1)
+            plt.xlabel('Energy (eV)')
+            plt.ylabel('Transmittance / Reflectance')
             plt.legend()
-            plt.savefig(save_path+f'/T_R_{s}.png', format='png',dpi=300)
+            plt.savefig(os.path.join(save_path,f'T_R_indv_plots',f'{s}.png'), format='png',dpi=300)
             plt.clf()
 
+            # Calculate absorptance, absorbance, absorbance coefficient
             try:
                 absorptance = 1 - T - R
-                absorbance = -np.log(1-absorptance)
+                absorbance = -np.log(T+R)
 
                 absorptance_dict[s] = absorptance
                 absorbance_dict[s] = absorbance
@@ -112,12 +113,41 @@ def analyse_data(samples, d, thickness, save_path):
                 print('Sample ', s, ': Invalid value encountered in calculations - check your data.')
         else:
             print('Sample ', s, ": T and R measurements are missing or don't match up - check your data.")
+    
+    # Plot all transmittance in one graph
+    for s in samples:
+        E = energy_dict[s]
+        T = np.array([j for i, j in d[s+'_T']])/100
+        plt.plot(E, T, label = s)
+    plt.xlim(min([energy_dict[s][0] for s in samples_cut]), max([energy_dict[s][-1] for s in samples_cut]))
+    plt.ylim(0, 1)
+    plt.xlabel('Energy (eV)')
+    plt.ylabel('Transmittance')
+    plt.legend()
+    plt.savefig(os.path.join(save_path,f'T_R_indv_plots',f'all_transmittance.png'), format='png',dpi=300)
+    plt.clf()
+
+    # Plot all reflectance in one graph
+    for s in samples:
+        E = energy_dict[s]
+        R = np.array([j for i, j in d[s+'_R']])/100
+        plt.plot(E, R, label = s)
+    plt.xlim(min([energy_dict[s][0] for s in samples_cut]), max([energy_dict[s][-1] for s in samples_cut]))
+    plt.ylim(0, 1)
+    plt.xlabel('Energy (eV)')
+    plt.ylabel('Reflectance')
+    plt.legend()
+    plt.savefig(os.path.join(save_path,f'T_R_indv_plots',f'all_reflectance.png'), format='png',dpi=300)
+    plt.clf()
+
+    print('Analysed samples: ', ', '.join(samples_cut)) 
 
     return samples_cut, energy_dict, absorptance_dict, absorbance_dict, alpha_dict
 
 
 def export_data(save_path, thickness, samples_cut, energy_dict, absorptance_dict, absorbance_dict, alpha_dict):
-        
+    
+    # Export calculated absorption values to csv
     if thickness != None:
         quants =  [('absorptance', absorptance_dict), ('absorbance', absorbance_dict), ('alpha', alpha_dict)]
     else:
@@ -125,7 +155,7 @@ def export_data(save_path, thickness, samples_cut, energy_dict, absorptance_dict
 
     for measurement, dict in quants:
 
-        with open(save_path+f'\{measurement}.csv', 'w', newline='') as csvfile:
+        with open(os.path.join(save_path,f'{measurement}.csv'), 'w', newline='') as csvfile:
 
             writer = csv.writer(csvfile, delimiter=',')
             headings = [('Energy (eV)', 'Sample '+ s) for s in samples_cut]
@@ -139,29 +169,36 @@ def export_data(save_path, thickness, samples_cut, energy_dict, absorptance_dict
                     row.extend(('{:.3f}'.format(energy_dict[s][i]), '{:.3f}'.format(dict[s][i])))
                 writer.writerow(row)
 
-    plt.title('Absorptance')
+    # Plot absorptance for all samples
     for s in samples_cut:
-        print()
         try:
             plt.plot(energy_dict[s], absorptance_dict[s], label = s)
         except:
             continue
     plt.legend()
-    plt.savefig(save_path+f'/absorptance.png', format='png',dpi=300)
+    plt.xlim(min([energy_dict[s][0] for s in samples_cut]), max([energy_dict[s][-1] for s in samples_cut]))
+    plt.ylim(0, 1)
+    plt.xlabel('Energy (eV)')
+    plt.ylabel('Absorptance')
+    plt.savefig(os.path.join(save_path,'absorptance.png'), format='png',dpi=300)
     plt.clf()
 
-    plt.title('Absorbance')
+    # Plot absorbance for all samples
     for s in samples_cut:
         try:
             plt.plot(energy_dict[s], absorbance_dict[s], label = s)
         except:
             continue
     plt.legend()
-    plt.savefig(save_path+f'/absorbance.png', format='png',dpi=300)
+    plt.xlim(min([energy_dict[s][0] for s in samples_cut]), max([energy_dict[s][-1] for s in samples_cut]))
+    plt.ylim(ymin = 0)
+    plt.xlabel('Energy (eV)')
+    plt.ylabel('Absorbance')
+    plt.savefig(os.path.join(save_path,'absorbance.png'), format='png',dpi=300)
     plt.clf()
 
+    # Plot absorbance coefficient for all samples, if film thickness is provided
     if thickness != None:
-        plt.title('Absorbance coefficient')
         for s in samples_cut:
             try:
                 plt.plot(energy_dict[s],alpha_dict[s], label = s)
@@ -169,18 +206,24 @@ def export_data(save_path, thickness, samples_cut, energy_dict, absorptance_dict
                 continue
         plt.legend()
         plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.0e'))
-        plt.savefig(save_path+f'/alpha.png', format='png',dpi=300)
+        plt.savefig(os.path.join(save_path,'alpha.png'), format='png',dpi=300)
         plt.yscale('log')
+        plt.xlabel('Energy (eV)')
+        plt.ylabel('Absorbance coefficient (cm^-1)')
+        plt.xlim(min([energy_dict[s][0] for s in samples_cut]), max([energy_dict[s][-1] for s in samples_cut]))
         plt.clf()
+
 
 def main():
 
     args = get_args()
-    save_path = os.path.dirname(args.data_path)
-    print(save_path)
+    save_path = os.path.join(os.path.dirname(args.data_path), 'processed')
+    if not os.path.isdir(save_path):
+        os.mkdir(save_path)
     samples, d = read_data(args.data_path)
     samples_cut, energy_dict, absorptance_dict, absorbance_dict, alpha_dict = analyse_data(samples, d, args.thickness, save_path)
     export_data(save_path, args.thickness, samples_cut, energy_dict, absorptance_dict, absorbance_dict, alpha_dict)
+
 
 if __name__ == "__main__":
     main()
