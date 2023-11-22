@@ -89,8 +89,8 @@ def analyse_data(samples, d, thickness, save_path):
             plt.plot(E, R, label = 'reflectance')
             plt.xlim(E[0], E[-1])
             plt.ylim(0, 1)
-            plt.xlabel('Energy (eV)')
-            plt.ylabel('Transmittance / Reflectance')
+            plt.xlabel('Energy (eV)', fontsize=14)
+            plt.ylabel('Transmittance / Reflectance', fontsize=14)
             plt.legend()
             plt.savefig(os.path.join(save_path,f'T_R_indv_plots',f'{s}.png'), format='png',dpi=300)
             plt.clf()
@@ -115,27 +115,27 @@ def analyse_data(samples, d, thickness, save_path):
             print('Sample ', s, ": T and R measurements are missing or don't match up - check your data.")
     
     # Plot all transmittance in one graph
-    for s in samples:
+    for s in samples_cut:
         E = energy_dict[s]
         T = np.array([j for i, j in d[s+'_T']])/100
         plt.plot(E, T, label = s)
     plt.xlim(min([energy_dict[s][0] for s in samples_cut]), max([energy_dict[s][-1] for s in samples_cut]))
     plt.ylim(0, 1)
-    plt.xlabel('Energy (eV)')
-    plt.ylabel('Transmittance')
+    plt.xlabel('Energy (eV)', fontsize=14)
+    plt.ylabel('Transmittance', fontsize=14)
     plt.legend()
     plt.savefig(os.path.join(save_path,f'T_R_indv_plots',f'all_transmittance.png'), format='png',dpi=300)
     plt.clf()
 
     # Plot all reflectance in one graph
-    for s in samples:
+    for s in samples_cut:
         E = energy_dict[s]
         R = np.array([j for i, j in d[s+'_R']])/100
         plt.plot(E, R, label = s)
     plt.xlim(min([energy_dict[s][0] for s in samples_cut]), max([energy_dict[s][-1] for s in samples_cut]))
     plt.ylim(0, 1)
-    plt.xlabel('Energy (eV)')
-    plt.ylabel('Reflectance')
+    plt.xlabel('Energy (eV)', fontsize=14)
+    plt.ylabel('Reflectance', fontsize=14)
     plt.legend()
     plt.savefig(os.path.join(save_path,f'T_R_indv_plots',f'all_reflectance.png'), format='png',dpi=300)
     plt.clf()
@@ -178,8 +178,8 @@ def export_data(save_path, thickness, samples_cut, energy_dict, absorptance_dict
     plt.legend()
     plt.xlim(min([energy_dict[s][0] for s in samples_cut]), max([energy_dict[s][-1] for s in samples_cut]))
     plt.ylim(0, 1)
-    plt.xlabel('Energy (eV)')
-    plt.ylabel('Absorptance')
+    plt.xlabel('Energy (eV)', fontsize=14)
+    plt.ylabel('Absorptance', fontsize=14)
     plt.savefig(os.path.join(save_path,'absorptance.png'), format='png',dpi=300)
     plt.clf()
 
@@ -192,8 +192,8 @@ def export_data(save_path, thickness, samples_cut, energy_dict, absorptance_dict
     plt.legend()
     plt.xlim(min([energy_dict[s][0] for s in samples_cut]), max([energy_dict[s][-1] for s in samples_cut]))
     plt.ylim(ymin = 0)
-    plt.xlabel('Energy (eV)')
-    plt.ylabel('Absorbance')
+    plt.xlabel('Energy (eV)', fontsize=14)
+    plt.ylabel('Absorbance', fontsize=14)
     plt.savefig(os.path.join(save_path,'absorbance.png'), format='png',dpi=300)
     plt.clf()
 
@@ -206,11 +206,11 @@ def export_data(save_path, thickness, samples_cut, energy_dict, absorptance_dict
                 continue
         plt.legend()
         plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.0e'))
-        plt.savefig(os.path.join(save_path,'alpha.png'), format='png',dpi=300)
-        plt.yscale('log')
-        plt.xlabel('Energy (eV)')
-        plt.ylabel('Absorbance coefficient (cm^-1)')
+        plt.xlabel('Energy (eV)', fontsize=14)
+        plt.ylabel('Absorbance coefficient (cm^-1)', fontsize=14)
         plt.xlim(min([energy_dict[s][0] for s in samples_cut]), max([energy_dict[s][-1] for s in samples_cut]))
+        plt.yscale('log')
+        plt.savefig(os.path.join(save_path,'alpha.png'), format='png',dpi=300)
         plt.clf()
 
 
