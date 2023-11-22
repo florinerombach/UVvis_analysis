@@ -15,7 +15,7 @@ Input data requirements:
   the same input file (.csv).
 
 - The transmittance and reflectance measurements for one sample 
-  must have exactly the same name.
+  must have exactly the same name, and names should not be duplicated.
 
 Notes:
 
