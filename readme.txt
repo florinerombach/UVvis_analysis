@@ -9,6 +9,11 @@ Absorptance = 1 - Transmittance - Reflectance
 Absorbance = - ln ( Transmittance + Reflectance )
 Absorption coefficient = Absorbance / d (cm-1)
 
+The following packages are needed to run this program:
+- Gooey
+- numpy
+- matplotlib
+
 Input data requirements:
 
 - All of your transmittance and reflectance data must be saved in 
